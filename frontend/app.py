@@ -8,8 +8,13 @@ st.set_page_config(
 )
 
 # Load CSS animations
-with open("assets/wave.css") as f:
+import os
+
+css_path = os.path.join(os.path.dirname(__file__), "assets", "wave.css")
+
+with open(css_path) as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
 
 st.markdown("""
 <div class="hero">
