@@ -26,10 +26,11 @@ MODEL_MAP = {
     ("pa", "en"): "Helsinki-NLP/opus-mt-pa-en",
 }
 
-# Cache loaded models
+# Cache for loaded models so we don't reload on every request
 _loaded_models = {}
 
-def load_model(src, tgt):
+
+def load_model(src: str, tgt: str):
     """Load + cache model for a given language pair."""
     key = (src, tgt)
 
@@ -47,12 +48,17 @@ def load_model(src, tgt):
 
 
 def translate_text(text: str, source: str, target: str) -> str:
-    """Translate text using public Helsinki models."""
-
+    """
+    Translate text using public Helsinki-NLP MarianMT models.
+    Works on CPU and with recent transformers versions.
+    """
     tokenizer, model = load_model(source, target)
 
-    batch = tokenizer.prepare_seq2seq_batch([text], return_tensors="pt")
-    generated = model.generate(**batch)
+    # Standard, future-proof API:
+    encoded = tokenizer([text], return_tensors="pt", padding=True, truncation=True)
+    generated = model.generate(**encoded, max_length=256)
 
-    translated = tokenizer.decode(generated[0], skip_special_tokens=True)
-    return translated
+    translated = tokenizer.batch_decode(generated, skip_special_tokens=True)[0]
+    return translated.strip()
+
+
