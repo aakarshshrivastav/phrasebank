@@ -15,5 +15,18 @@ with col2:
     target = st.selectbox("Target", ["en","hi","ta","te","bn","mr","gu","pa"])
 
 if st.button("Translate"):
-    r = requests.post(f"{BACKEND}/translate", json={"text": text, "source": source, "target": target})
-    st.success(r.json().get("translated_text"))
+    try:
+        r = requests.post(
+            f"{BACKEND}/translate",
+            json={"text": text, "source": source, "target": target},
+            timeout=30,
+        )
+        data = r.json()
+
+        if r.ok and "translated_text" in data:
+            st.success(data["translated_text"])
+        else:
+            # Show backend error if present
+            st.error(data.get("error", "Translation failed."))
+    except Exception as e:
+        st.error(f"Request failed: {e}")
