@@ -1,64 +1,63 @@
-# services/translate_service.py
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-from transformers import MarianTokenizer, MarianMTModel
+# NLLB model
+model_name = "facebook/nllb-200-distilled-600M"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
-# Map of (source → target) → corresponding model
-MODEL_MAP = {
-    ("en", "hi"): "Helsinki-NLP/opus-mt-en-hi",
-    ("hi", "en"): "Helsinki-NLP/opus-mt-hi-en",
-
-    ("en", "ta"): "Helsinki-NLP/opus-mt-en-ta",
-    ("ta", "en"): "Helsinki-NLP/opus-mt-ta-en",
-
-    ("en", "te"): "Helsinki-NLP/opus-mt-en-te",
-    ("te", "en"): "Helsinki-NLP/opus-mt-te-en",
-
-    ("en", "bn"): "Helsinki-NLP/opus-mt-en-bn",
-    ("bn", "en"): "Helsinki-NLP/opus-mt-bn-en",
-
-    ("en", "mr"): "Helsinki-NLP/opus-mt-en-mr",
-    ("mr", "en"): "Helsinki-NLP/opus-mt-mr-en",
-
-    ("en", "gu"): "Helsinki-NLP/opus-mt-en-gu",
-    ("gu", "en"): "Helsinki-NLP/opus-mt-gu-en",
-
-    ("en", "pa"): "Helsinki-NLP/opus-mt-en-pa",
-    ("pa", "en"): "Helsinki-NLP/opus-mt-pa-en",
+# Map simple language codes to NLLB language tags
+LANG_MAP = {
+    "en": "eng_Latn",
+    "hi": "hin_Deva",
+    "ta": "tam_Taml",
+    "te": "tel_Telu",
+    "bn": "ben_Beng",
+    "mr": "mar_Deva",
+    "gu": "guj_Gujr",
+    "pa": "pan_Guru",
 }
 
-# Cache for loaded models so we don't reload on every request
-_loaded_models = {}
 
+def _get_lang_id(lang_code: str) -> int:
+    """
+    Get the token id for a language code like 'hin_Deva' without relying on
+    tokenizer.lang_code_to_id (which is missing in older transformers).
+    """
+    # If your tokenizer DOES have lang_code_to_id, use it
+    if hasattr(tokenizer, "lang_code_to_id"):
+        return tokenizer.lang_code_to_id[lang_code]
 
-def load_model(src: str, tgt: str):
-    """Load + cache model for a given language pair."""
-    key = (src, tgt)
-
-    if key not in MODEL_MAP:
-        raise ValueError(f"Translation from {src} → {tgt} is not supported.")
-
-    model_name = MODEL_MAP[key]
-
-    if model_name not in _loaded_models:
-        tokenizer = MarianTokenizer.from_pretrained(model_name)
-        model = MarianMTModel.from_pretrained(model_name)
-        _loaded_models[model_name] = (tokenizer, model)
-
-    return _loaded_models[model_name]
+    # Fallback: convert the language code token to id directly
+    return tokenizer.convert_tokens_to_ids(lang_code)
 
 
 def translate_text(text: str, source: str, target: str) -> str:
-    """
-    Translate text using public Helsinki-NLP MarianMT models.
-    Works on CPU and with recent transformers versions.
-    """
-    tokenizer, model = load_model(source, target)
+    # Resolve language tags, with safe defaults
+    src = LANG_MAP.get(source, "eng_Latn")
+    tgt = LANG_MAP.get(target, "hin_Deva")
 
-    # Standard, future-proof API:
-    encoded = tokenizer([text], return_tensors="pt", padding=True, truncation=True)
-    generated = model.generate(**encoded, max_length=256)
+    # Tell tokenizer what the source language is
+    tokenizer.src_lang = src
 
-    translated = tokenizer.batch_decode(generated, skip_special_tokens=True)[0]
-    return translated.strip()
+    # Tokenize
+    inputs = tokenizer(text, return_tensors="pt")
 
+    # Generate, forcing BOS to the target language id
+    forced_bos_id = _get_lang_id(tgt)
+    output = model.generate(
+        **inputs,
+        forced_bos_token_id=forced_bos_id,
+        max_length=128,
+    )
 
+    translated = tokenizer.batch_decode(output, skip_special_tokens=True)[0].strip()
+
+    # Custom rule: "hi sir" → "नमस्ते सर" (instead of "हाय सर")
+    if source == "en" and target == "hi":
+        if text.strip().lower().startswith("hi sir"):
+            translated = "नमस्ते सर"
+    if source == "en" and target == "hi":
+        if text.strip().lower().startswith("hi mam"):
+            translated = "नमस्ते मैडम"
+
+    return translated
