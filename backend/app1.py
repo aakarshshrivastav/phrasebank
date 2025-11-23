@@ -1,41 +1,36 @@
-from flask import Flask
-from flask_cors import CORS
+import streamlit as st
+import base64
 
-# Import all route blueprints
-from routes.stt_route import stt_bp
-from routes.translate_route import translate_bp
-from routes.tts_route import tts_bp
-from routes.score_route import score_bp
-from routes.phrases_route import phrases_bp
-from routes.log_route import log_bp
+st.set_page_config(
+    page_title="Voice Translator AI",
+    page_icon="🎤",
+    layout="wide",
+)
 
+# Load CSS animations
+import os
 
-def create_app():
-    """
-    Application factory for the Voice Translator backend.
-    Loads all blueprints and configures CORS.
-    """
-    app = Flask(__name__)
+css_path = os.path.join(os.path.dirname(__file__), "assets", "wave.css")
 
-    # Enable CORS (allow calls from React frontend on port 3000)
-    CORS(app, resources={r"*": {"origins": "*"}})
-
-    # Register all blueprints
-    app.register_blueprint(stt_bp)
-    app.register_blueprint(translate_bp)
-    app.register_blueprint(tts_bp)
-    app.register_blueprint(score_bp)
-    app.register_blueprint(phrases_bp)
-    app.register_blueprint(log_bp)
-
-    @app.route("/")
-    def home():
-        return {"status": "Voice Translator Backend Running"}
-
-    return app
+with open(css_path) as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 
-if __name__ == "__main__":
-    app = create_app()
-    app.run(host="0.0.0.0", port=5001, debug=True)
+hero_html = """
+<div class="hero">
+    <h1 class="title">🎤 Voice Translator AI</h1>
+    <p class="subtitle">Real-time translation • Speech synthesis • Pronunciation scoring • Whisper STT</p>
+    <div class="buttons">
+        <a href="/?page=Text_to_Speech" class="btn">Text → Speech</a>
+        <a href="/?page=Speech_to_Text" class="btn">Speech → Text</a>
+        <a href="/?page=Translate" class="btn">Translate</a>
+        <a href="/?page=Pronunciation_Score" class="btn">Pronunciation</a>
+    </div>
+</div>
+"""
 
+st.markdown(hero_html, unsafe_allow_html=True)
+
+st.markdown("<hr>", unsafe_allow_html=True)
+
+st.info("Use the sidebar to navigate between features.")
