@@ -16,11 +16,10 @@ with open(css_path) as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 
-st.markdown("""
+hero_html = """
 <div class="hero">
     <h1 class="title">🎤 Voice Translator AI</h1>
     <p class="subtitle">Real-time translation • Speech synthesis • Pronunciation scoring • Whisper STT</p>
-    
     <div class="buttons">
         <a href="/?page=Text_to_Speech" class="btn">Text → Speech</a>
         <a href="/?page=Speech_to_Text" class="btn">Speech → Text</a>
@@ -28,7 +27,9 @@ st.markdown("""
         <a href="/?page=Pronunciation_Score" class="btn">Pronunciation</a>
     </div>
 </div>
-""", unsafe_allow_html=True)
+"""
+
+st.markdown(hero_html, unsafe_allow_html=True)
 
 st.markdown("<hr>", unsafe_allow_html=True)
 
