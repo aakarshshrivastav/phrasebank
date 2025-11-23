@@ -1,7 +1,8 @@
 import streamlit as st
 import requests
 
-BACKEND = "http://localhost:5001"
+BACKEND = "https://lonesomely-unbevelled-audriana.ngrok-free.dev"
+
 
 st.title("📝 Save Practice Logs")
 
